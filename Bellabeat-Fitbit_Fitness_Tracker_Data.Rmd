@@ -1,0 +1,368 @@
+---
+title: "Bellabeat - Fitbit Fitness Tracker Data (Case Study)"
+author: "Irvan Fauzan Syarif"
+date: "06 Agustus 2023"
+output:
+  html_document: default
+  pdf_document: default
+  keep_md: true
+---
+
+## __Bellabeat Data Report__
+
+### __Skenario__
+Bellabeat adalah perusahaan produk berteknologi tinggi yang berfokus pada kesehatan untuk wanita. Meskipun Bellabeat sudah menjadi perusahaan kecil yang sukses, mereka memiliki potensi untuk menjadi pemain yang lebih besar di pasar perangkat pintar global. Cofounder dan Chief Creative Officer Bellabeat, Urška Sršen, percaya bahwa menganalisis data kebugaran perangkat pintar dapat membantu membuka peluang pertumbuhan baru bagi perusahaan. Sebagai seorang analis data junior yang bekerja di tim analis pemasaran di Bellabeat, Saya ditugaskan untuk fokus pada produk Bellabeat dan menganalisis data penggunaan perangkat pintar untuk mendapatkan wawasan tentang bagaimana pelanggan menggunakan perangkat pintar mereka. Kemudian, dengan menggunakan informasi ini, ia menginginkan rekomendasi tingkat tinggi tentang bagaimana tren ini dapat membantu penyusunan strategi pemasaran Bellabeat.
+
+### __Tahap Bertanya (*Ask*)__
+
+#### __Masalah apa yang Anda coba pecahkan?__
+Salah satu pendiri Bellabeat, Urska Srsen, telah meminta tim analitik untuk fokus pada produk Bellabeat dan menganalisis data penggunaan perangkat pintar untuk mendapatkan wawasan tentang bagaimana orang sudah menggunakan perangkat pintar mereka. Dari data ini, Srsen menginginkan rekomendasi tingkat tinggi tentang bagaimana tren ini dapat menginformasikan strategi pemasaran Bellabeat.
+
+#### __Bagaimana wawasan Anda dapat mendorong keputusan bisnis?__
+Wawasan saya akan mengidentifikasi pola penggunaan perangkat pintar, dan berdasarkan informasi tersebut, saya akan memberikan rekomendasi khusus. Contohnya, saya akan menganalisis seberapa aktifnya populasi umum ketika beraktivitas dalam seminggu dan mengkategorikan tingkat aktivitas mereka dari yang terendah hingga teraktif.
+
+#### __Tugas bisnis__
+Fokus pada data penggunaan perangkat pintar, kemudian identifikasi tren yang mengarah pada rekomendasi tingkat tinggi yang dapat menginformasikan strategi pemasaran Bellabeat.
+
+#### __Pemangku Kepentingan__
+Anggota eksekutif Urška Sršen dan Sando Mur, serta tim analitik pemasaran Bellabeat.
+
+
+### __Tahap Persiapan (*Prepare*)__
+
+#### __Sumber Data: Ruang Lingkup dan Keterbatasan Datanya__
+Data disimpan di Kaggle dan semua data disimpan dalam format panjang dan lebar. Data ini diunggah oleh Mobius. Peringkat kredibilitas untuk data ini memiliki skor 10. Data ini tidak ROCCC (Reliable, Original, Comprehensive, Current, and Citation), karena hanya memperhitungkan 30 pengguna Fitbit sehingga analisis apa pun yang dilakukan tidak akan memperhitungkan populasi umum. Mengenai keandalan, dapat disimpulkan bahwa karena audiens produk Bellabeat sebagian besar adalah wanita, menganalisis data dari pengguna Fitbit dari kedua jenis kelamin tidak akan mengarah pada pengambilan keputusan berdasarkan data yang akurat. Ada beberapa data yang hilang pada beberapa file seperti KTP dan data demografis (usia, jenis kelamin, dll). Datanya juga tidak terkini, dirilis sekitar 3 tahun yang lalu pada tahun 2016.
+
+### __Tahap Proses (*Process*)__
+
+#### __Alat yang digunakan__
+RStudio
+
+#### __Proses *Load Package*, *Import* dan *Cleansing* data__
+
+Mengatur R Environment untuk memuat paket:
+``` {r loading packages}
+library(tidyverse)
+library(skimr)
+library(janitor)
+library(dplyr)
+library(lubridate)
+library(readr)
+library(tibble)
+```
+
+Kemudian mulai mengimport data:
+```{r import data}
+activity <- read_csv("C:/Users/VANFAUZAN/Documents/R/study_case/data_fitbit/dailyActivity_merged.csv")
+sleep <- read_csv("C:/Users/VANFAUZAN/Documents/R/study_case/data_fitbit/sleepDay_merged.csv")
+hourly_steps <- read_csv("C:/Users/VANFAUZAN/Documents/R/study_case/data_fitbit/hourlySteps_merged.csv")
+calories_burned_perhour <- read_csv("C:/Users/VANFAUZAN/Documents/R/study_case/data_fitbit/hourlyCalories_merged.csv")
+```
+
+Pemeriksaan setiap *data frame* menggunakan fungsi str() / struktur:
+```{r pemeriksaan struktur data}
+str(activity)
+str(sleep)
+str(hourly_steps)
+str(calories_burned_perhour)
+```
+
+Pemeriksaan nilai duplikat pada data:
+```{r pemeriksaan duplikat pada data}
+sum(duplicated(activity))
+sum(duplicated(sleep))
+sum(duplicated(hourly_steps))
+sum(duplicated(calories_burned_perhour))
+```
+
+Menghapus nilai duplikat pada tabel *sleep*:
+```{r}
+sleep <- sleep[!duplicated(sleep), ]
+```
+
+Mengubah data yang memiliki format tanggal dan waktu:
+```{r}
+activity <- activity %>% 
+  rename(date = ActivityDate) %>% 
+  mutate(date = as_date(date, format = "%m/%d/%Y"))
+
+sleep <- sleep %>% 
+  rename(date = SleepDay) %>% 
+  mutate(date = as_date(date,format ="%m/%d/%Y %I:%M:%S %p"))
+
+hourly_steps <- hourly_steps %>%
+  rename(date_time = ActivityHour ) %>% 
+  mutate(date_time = as.POSIXct(date_time, format ="%m/%d/%Y %I:%M:%S %p"))
+
+calories_burned_perhour <- calories_burned_perhour %>%
+  rename(date_time = ActivityHour ) %>% 
+  mutate(date_time = as.POSIXct(date_time, format = "%m/%d/%Y %I:%M:%S %p"))
+```
+
+Menambahkan kolom baru pada setiap tabel berdasarkan jumlah harii dalam 1 minggu:
+```{r}
+activity$day_of_week <- weekdays(activity$date)
+sleep$day_of_week <- weekdays(sleep$date)
+hourly_steps$day_of_week <- weekdays(hourly_steps$date_time)
+calories_burned_perhour$day_of_week <- weekdays(calories_burned_perhour$date_time)
+```
+
+```{r}
+head(activity)
+head(sleep)
+head(hourly_steps)
+head(calories_burned_perhour)
+```
+
+Membaca sekilas setiap bingkai data:
+```{r}
+skim_without_charts(activity)
+skim_without_charts(sleep)
+skim_without_charts(hourly_steps)
+skim_without_charts(calories_burned_perhour)
+```
+
+Menggabungkan data *activity* dan *sleep* berdasarkan *Primary Key* yaitu *id, date, day_of_week*:
+```{r}
+activity_plus_sleep <- merge(activity, sleep, by = c("Id", "date", "day_of_week"))
+head(activity_plus_sleep)
+```
+
+Mengonversi semua kolom dalam tabel ke snake_case sekaligus, menggunakan Loop:
+```{r}
+for (col in names(activity_plus_sleep)) {
+  new_name <- snakecase::to_snake_case(col)
+  names(activity_plus_sleep)[names(activity_plus_sleep) == col] <- new_name
+}
+
+for (col in names(calories_burned_perhour)) {
+  new_name <- snakecase::to_snake_case(col)
+  names(calories_burned_perhour)[names(calories_burned_perhour) == col] <- new_name
+}
+
+for (col in names(hourly_steps)) {
+  new_name <- snakecase::to_snake_case(col)
+  names(hourly_steps)[names(hourly_steps) == col] <- new_name
+}
+```
+
+#### __Dokumentasi *cleansing data*__
+##### __Change Log__
+Versi 1.0 (06 Agustus 2023)
+
+##### __Change__
+• Mengubah nama kolom menjadi snake_case untuk semua *data frame* agar lebih mudah dibaca.
+• Perubahan format tanggal dari format 'karakter' menjadi format 'tanggal waktu' untuk semua *data frame*
+
+##### __Removals__
+• Menghapus nilai duplikat pada data *sleep*
+
+##### __Additions__
+• Penambahan kolom untuk jumlah hari dalam 1 minggu pada setiap *data frame*
+
+### __Tahap Analisis & Berbagi (*Analyze & Share*)__
+Untuk menganalisis data ini saya harus mengambil referensi dengan indeks pedometer umum yang terkenal di industri kebugaran kesehatan. Salah satu indeks pedometer yang paling dikenal dan diterima dengan baik oleh para ahli dapat ditemukan menggunakan tautan ini <https://www.10000steps.org.au/articles/healthy-lifestyles/counting-steps/>. Indeks pedometer ini menunjukkan rentang yang sesuai dengan setiap tingkat aktivitas. Perlu dicatat bahwa jumlah langkah yang disarankan untuk orang dewasa yang sehat, usia 18 hingga 64 tahun, adalah 10.000 langkah per hari. Rentang berikut yang diambil dari sumber tertaut adalah sebagai berikut:
+
+• Berdiam diri sekitar kurang dari 5,000 langkah per hari.
+
+• Kurang aktif sekitar 5,000 sampai 7,499 langkah per hari.
+
+• Agak aktif sekitar 7,500 to 9,999 langkah per hari.
+
+• Aktif sekitar lebih dari 10,000 langkah per hari.
+
+Sekarang saya akan menghitung rata-rata jumlah langkah dan rata-rata jumlah kalori yang dibakar oleh setiap pengguna serta berapa banyak rata-rata tidur yang didapatkan:
+```{r}
+average_activity <- activity_plus_sleep %>%
+  group_by(id) %>%
+  summarise(avg_daily_steps = mean(total_steps),
+            avg_daily_calories = mean(calories),
+            avg_sleep = mean(total_minutes_asleep))
+```
+
+Melihat data dalam tibble untuk 24 Unique id untuk mendapatkan sekilas nilai rata-rata untuk semua pengguna:
+```{r}
+print(as_tibble(average_activity), n = 24)
+```
+
+Dalam rangka untuk menampilkan ID di sumbu x dalam skala kategori:
+```{r}
+average_activity <- average_activity %>% 
+  mutate(id = as_factor(id))
+```
+
+Visualisasi data berdasarkan id :
+```{r}
+ggplot(data = average_activity, aes(x = id, y = avg_daily_steps)) +
+  geom_bar(stat = "identity", color = "green", width = .5) +
+  labs(title = " Gambar 1: Rata-rata Langkah Harian yang Dilakukan Masing-masing 24 Pengguna",
+       x = "Nomor ID",
+       y = "Rata-rata Langkah Harian yang Dilakukan Masing-masing 24 Pengguna"
+  ) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(data = average_activity, aes(x = id, y = avg_daily_calories)) +
+  geom_bar(stat = "identity", color = "darkblue", width =.5) +
+  labs(title = "Gambar 2: Rata-rata Harian Kalori yang Terbakar Masing-masing 24 Pengguna",
+       x = "Nomor ID",
+       y = "Rata-rata Harian Kalori yang Terbakar"
+  ) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+ggplot(data = average_activity, aes(x = id, y = avg_sleep)) +
+  geom_bar(stat = "identity", color = "orange", width =.5) +
+  labs(title = "Gambar 3: Rata-rata Tidur Per-Menit Masing-masing 24 Pengguna",
+       x = "Nomor ID",
+       y = "Rata-rata Tidur Per-Menit"
+  ) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+Dari grafik di atas kita dapat melihat bahwa pengguna perangkat Fitbit termasuk dalam rentang “agak aktif” sementara ada beberapa yang langkahnya berada pada atau di bawah 5000 (Rentang menetap). Berdasarkan grafik batang ini, hanya satu orang yang rata-rata melakukan lebih dari 15.000 langkah sementara mayoritas tidak memenuhi jumlah 10.000 langkah yang disarankan. Selain itu, sebagian besar pengguna rata-rata membakar sekitar 2000 kalori sementara beberapa pengguna membakar lebih dari 3000 kalori per hari. Terakhir, dari 24 pengguna, hanya 13 yang memenuhi jam tidur minimum yang disarankan (420 menit). Dengan kata lain, lebih dari separuh pengguna mendapatkan cukup tidur untuk hari yang produktif.
+
+Selanjutnya saya ingin mengkonfirmasi hipotesis bahwa lebih banyak kalori yang dibakar seiring dengan bertambahnya jumlah langkah:
+```{r}
+activity %>%
+  ggplot(aes(x = TotalSteps, y = Calories))+
+  geom_jitter() +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Gambar 4: Kalori yang Terbakar Melalui Jumlah Langkah Harian", 
+    x = "Langkah Harian",
+    y = "Kalori yang Terbakar") +
+  theme(panel.background = element_blank(),
+        plot.title = element_text( size=14))
+```
+
+Berdasarkan gambar 4 di atas, seperti yang saya harapkan, pasti ada hubungan antara kalori yang terbakar dan jumlah langkah yang dilakukan setiap hari. Kalori yang terbakar biasanya meningkat seiring dengan meningkatnya jumlah langkah harian yang dilakukan.
+
+Dan saya ingin melihat apakah ada hubungan antara total tidur per menit dan jumlah langkah yang diambil setiap hari.
+```{r}
+activity_plus_sleep%>% 
+  ggplot(aes(x = total_steps,
+             y = total_minutes_asleep)) +
+  geom_jitter() +
+  geom_smooth(method = "loess", color = "blue") +
+  labs(title = "Gambar 5: Tidur Per-Menit vs Langkah Harian",
+       x = "Langkah Harian",
+       y = "Tidur Per-Menit") +
+  theme(panel.background = element_blank(),
+        plot.title = element_text(size=14))
+```
+
+Berdasarkan gambar 5 di atas tidak ada hubungan antara berapa banyak tidur yang didapat pengguna dengan berapa banyak langkah yang mereka ambil pada hari tertentu. Plot ini menyiratkan bahwa lamanya waktu tidur pengguna tidak selalu berkorelasi dengan jumlah langkah yang dilakukan pada hari tertentu.
+
+Untuk mendapatkan gambaran tentang kerangka data aktivitas harian, saya akan memilih beberapa kolom dan merangkum datanya:
+```{r}
+activity %>%
+  select(TotalSteps,
+         Calories) %>%
+  summary()
+```
+
+Beberapa grafik dibuat untuk meninjau bagaimana tingkat aktivitas yang berbeda (rendah, sedang, tinggi) yang diukur dalam hitungan menit mempengaruhi penggunaan kalori:
+```{r}
+ggplot(data = activity)+
+  aes(x = LightlyActiveMinutes,
+      y = Calories)+
+  geom_point(color = "black")+
+  geom_smooth(method = 'loess',fill = "green")+
+  labs(x = "Aktivitas Rendah Per-Menit", y = "Total Kalori Terbakar", 
+       title = "Gambar 6: Kalori Terbakar Berdasarkan Aktivitas Rendah")
+
+ggplot(data = activity)+
+  aes(x = FairlyActiveMinutes,
+      y = Calories)+
+  geom_point(color = "black")+
+  geom_smooth(method = 'loess', fill = "lightblue")+
+  labs(x = "Aktivitas Sedang Per-Menit", y = "Total Kalori Terbakar", 
+       title = "Gambar 7: Kalori Terbakar Berdasarkan Aktivitas Sedang")
+
+ggplot(data = activity)+
+  aes(x = VeryActiveMinutes,
+      y = Calories)+
+  geom_point(color = "black")+
+  geom_smooth(method = 'loess', fill = "red")+
+  labs(x = "Aktivitas Tinggi Per-Menit", y = "Total Kalori Terbakar", 
+       title = "Gambar 8: Kalori Terbakar Berdasarkan Aktivitas Tinggi")
+```
+
+Gambar 6 menunjukkan sulit membakar lebih dari 5000 kalori pada aktivitas rendah. Sebagian besar pengguna membakar 1200-4000 kalori dalam 100-300 menit aktivitas intensitas rendah.
+
+Gambar 7 menunjukkan lebih sedikit orang aktif lebih dari 1 jam. Aktivitas medium kebanyakan berlangsung dalam 50 menit.
+
+Gambar 8 menunjukkan kalori terbakar cepat pada aktivitas tinggi. Beberapa pengguna mampu membakar 1500-3500 kalori dalam <50 menit. Cara pembakaran berbeda, misalnya, bekerja di konstruksi selama 200 menit hanya membakar 1000 kalori ekstra. Hubungan positif ini menunjukkan semakin lama aktivitas tinggi, semakin banyak kalori terbakar.
+
+Jika dilihat data ini dalam bentuk tabel:
+```{r}
+activity %>%
+  select(LightlyActiveMinutes,
+         FairlyActiveMinutes, 
+         VeryActiveMinutes, 
+         SedentaryMinutes) %>%
+  summary()
+```
+
+Tabel ini menunjukkan bahwa kolom aktivitas rendah per-menit dan sedentary menit menyumbang menit terbanyak yang dihabiskan oleh semua peserta. Dengan kata lain, kebanyakan orang menghabiskan waktu mereka dengan gaya hidup yang tidak banyak bergerak dibandingkan dengan gaya hidup yang agak aktif atau sangat aktif.
+
+Saya juga melihat hari mana yang paling 'aktif' bagi pengguna dalam hal rata-rata tertinggi setiap hari:
+```{r}
+activity_plus_sleep %>% 
+  group_by(day_of_week) %>% 
+  drop_na() %>% 
+  summarize(mean_total_steps = mean(total_steps))
+```
+
+Terlihat dengan jelas bahwa hari Sabtu memiliki jumlah langkah terbanyak diikuti oleh Senin dan Selasa, sedangkan hari Minggu memiliki jumlah langkah paling sedikit.
+
+Untuk menunjukkan rata-rata kalori yang terbakar per jam setiap hari berikut visualnya:
+```{r}
+avg_calories_burned <- calories_burned_perhour  %>%
+  group_by(day_of_week) %>% 
+  summarize(avg_burned = mean (calories))
+head(avg_calories_burned)
+
+ggplot(data = avg_calories_burned, aes(
+  x = factor(day_of_week,levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+  y = avg_burned)) +
+  geom_bar(stat = "identity", color = "blue", fill = "lightblue", width = .70) +
+  labs(title = "Gambar 9: Rata-rata Kalori Terbakar Per-Jam Per-Hari",
+    x = "Hari",
+    y = "Kalori Terbakar"
+  ) +
+  coord_cartesian(ylim=c(90,100))
+```
+
+Dari grafik batang di atas terlihat bahwa lebih banyak kalori yang dibakar per jam pada hari Sabtu, dengan paling sedikit kalori yang terbakar pada hari Minggu. Oleh karena itu, dapat disimpulkan bahwa peserta lebih aktif pada hari Sabtu dan paling sedikit aktif pada hari Minggu. Hal ini masuk akal karena kebanyakan orang tidak bekerja pada akhir pekan dan cenderung lebih sering berolahraga atau keluar rumah, dan pada hari Minggu biasanya merupakan hari istirahat bagi kebanyakan orang.
+
+### __Tahap Aksi (*Act*)__
+
+### __Insights__
+Beberapa pola lain dapat terlihat dengan membandingkan berbagai parameter. Tetapi, berdasarkan pola yang terlihat dalam data Fitbit ini, dapat disimpulkan sebagai berikut:
+
+• Data ini tidak cukup untuk memberikan rekomendasi tepat tentang cara Bellabeat memodifikasi produk mereka untuk wanita. Informasi demografi, terutama data gender, akan sangat membantu.
+
+• Beberapa data kehilangan informasi seperti ID, catatan berat badan, dan langkah harian. Oleh karena itu, pengumpulan data harus dilakukan melalui perangkat Bellabeat.
+
+• Laporan ini menunjukkan bahwa aktivitas fisik seperti berjalan, lari, dan berolahraga penting untuk gaya hidup sehat. Ini membantu membakar lebih banyak kalori dan menjaga kebugaran.
+
+• Orang cenderung memilih gaya hidup kurang aktif, kecuali ada dorongan fisik seperti bunyi atau getaran dari aplikasi yang mendorong mereka untuk tetap aktif.
+
+• Hanya sebagian peserta yang mendapatkan cukup tidur (7 jam), dan ini tidak selalu berkorelasi dengan jumlah langkah di hari berikutnya. Beberapa mungkin memiliki pekerjaan yang aktif, sementara yang lain tidak.
+
+• Rata-rata, peserta membakar sekitar 2000 kalori sehari terlepas dari tingkat aktivitas.
+
+• Pengeluaran kalori meningkat seiring dengan jumlah langkah. Ini berlaku bahkan jika orang melakukan aktivitas tingkat rendah, meskipun sangat sulit untuk membakar lebih dari 5000 kalori.
+
+• Umumnya, orang paling aktif pada hari Sabtu dan paling tidak aktif pada hari Minggu.
+
+### __Recommendations__
+Saya akan menggunakan wawasan dari botol air Bellabeat untuk meningkatkan kampanye pemasaran. Botol air ini memantau asupan air harian dengan teknologi pintar untuk memastikan pengguna tetap terhidrasi. Alat ini terhubung ke aplikasi Bellabeat untuk memantau tingkat hidrasi.
+
+1. __Kolaborasi dan Kemitraan__: Bellabeat dapat menjalin kemitraan dengan organisasi atau komunitas kesehatan untuk memperluas jangkauan kampanye pemasaran. Dengan bekerja sama dengan ahli kesehatan, pelatih, atau influencer kesehatan, mereka dapat memberikan pengetahuan tambahan dan memberikan dorongan positif kepada pengguna untuk mengadopsi gaya hidup sehat.
+
+2. __Kustomisasi dan Personalisasi__: Memungkinkan pengguna untuk menyesuaikan pengaturan dan tujuan mereka dalam aplikasi Bellabeat dapat meningkatkan keterlibatan. Fitur-fitur seperti pengaturan target pribadi, pengingat kustom, atau rekomendasi berdasarkan aktivitas sebelumnya dapat membantu pengguna merasa terhubung secara pribadi dengan produk dan aplikasi Bellabeat.
+
+3. __Fokus pada Gaya Hidup Sehat__: Penting untuk mendorong dan memberikan kesempatan kepada masyarakat untuk mengadopsi gaya hidup sehat. Ini bisa dicapai dengan kampanye pemasaran yang menekankan elemen kunci seperti aktivitas fisik, hidrasi yang memadai, tidur yang cukup, dan memantau parameter penting seperti langkah, kalori, dan tidur.
+
+4. __Edukasi tentang Pentingnya Minum Air__: Diperlukan upaya edukasi untuk menginformasikan masyarakat tentang pentingnya asupan air yang memadai setiap hari. Botol air cerdas seperti 'Spring' dapat membantu memantau dan memotivasi pengguna untuk tetap terhidrasi, terutama pada saat-saat kurang aktif.
+
+5. __Insentif untuk Mendorong Partisipasi__: Memberikan insentif kepada pengguna botol air Spring yang mencapai target hidrasi dapat menjadi cara efektif untuk mendorong partisipasi aktif. Insentif ini dapat berupa poin atau diskon untuk produk lain, dan bisa disesuaikan dengan preferensi individu serta kondisi hari tertentu, seperti hari Minggu yang seringkali menjadi kesempatan untuk meningkatkan aktivitas dan hidrasi.
+
+
